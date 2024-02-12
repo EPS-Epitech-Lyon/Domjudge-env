@@ -1,0 +1,70 @@
+version: '3.9'
+
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: dj-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_USER: domjudge
+      MYSQL_PASSWORD: djpw
+      MYSQL_DATABASE: domjudge
+    ports:
+      - "13306:3306"
+    command: --max-connections=1000
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  domserver:
+    image: domjudge/domserver:latest
+    container_name: domserver
+    depends_on:
+      - mariadb
+    environment:
+      CONTAINER_TIMEZONE: Europe/Amsterdam
+      MYSQL_HOST: mariadb
+      MYSQL_USER: domjudge
+      MYSQL_PASSWORD: djpw
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: domjudge
+    ports:
+      - "12345:80"
+    links:
+      - mariadb:mariadb
+
+  judgehost-0:
+    image: domjudge/judgehost:latest
+    container_name: judgehost-0
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    depends_on:
+      - domserver
+    environment:
+      CONTAINER_TIMEZONE: Europe/Amsterdam
+      DOMSERVER_BASEURL: <URL>
+      JUDGEDAEMON_USERNAME: judgehost
+      JUDGEDAEMON_PASSWORD: <API_PASSWORD>
+      DAEMON_ID: 0
+    links:
+      - domserver:domserver
+
+  judgehost-1:
+    image: domjudge/judgehost:latest
+    container_name: judgehost-1
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    depends_on:
+      - domserver
+    environment:
+      CONTAINER_TIMEZONE: Europe/Amsterdam
+      DOMSERVER_BASEURL: <URL>
+      JUDGEDAEMON_USERNAME: judgehost
+      JUDGEDAEMON_PASSWORD: <API_PASSWORD>
+      DAEMON_ID: 1
+    links:
+      - domserver:domserver
+
+volumes:
+  mariadb_data:
